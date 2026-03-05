@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Story Editor — StoryQuest</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    body { background: var(--bg); }
+    .editor-page { padding: 0 24px 80px; max-width: var(--max-w); margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a class="nav__logo" href="index.html">Story<span>Quest</span></a>
+    <div class="nav__links">
+      <a class="nav__link" href="index.html">Home</a>
+      <a class="nav__link" href="explore.html">Explore</a>
+      <a class="nav__link" href="me.html">My Drafts</a>
+    </div>
+    <a class="nav__cta" href="editor.html">+ New Story</a>
+  </div>
+</nav>
+
+<div class="editor-page">
+  <!-- Topbar -->
+  <div class="editor-topbar">
+    <a class="btn btn--ghost btn--sm" href="me.html">← My Drafts</a>
+    <h1 id="editor-heading">Story Editor</h1>
+    <span class="autosave-badge" id="autosave-badge">💾 Autosave on</span>
+    <div style="display:flex;gap:8px;margin-left:auto">
+      <button class="btn btn--secondary btn--sm" onclick="previewStory()">👁 Preview</button>
+      <button class="btn btn--secondary btn--sm" onclick="exportStory()">⬇ Export</button>
+      <button class="btn btn--primary btn--sm"   onclick="showPublishPanel()">🚀 Publish</button>
+    </div>
+  </div>
+
+  <div class="editor-layout">
+    <!-- Sidebar: story meta -->
+    <aside class="editor-sidebar">
+      <div class="card">
+        <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:16px;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em">Story Settings</h3>
+
+        <div class="form-group">
+          <label class="form-label">Title *</label>
+          <input class="form-input" id="ed-title" placeholder="The Comeback Nobody Saw Coming" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tagline</label>
+          <input class="form-input" id="ed-tagline" placeholder="A one-line hook for your story" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Theme</label>
+          <select class="form-select" id="ed-theme"></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Cover Style</label>
+          <div class="cover-picker" id="cover-swatches"></div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="form-group">
+          <label class="form-label">Author Handle</label>
+          <input class="form-input" id="ed-handle" placeholder="@yourname" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <input class="form-input" id="ed-displayname" placeholder="Your Name" />
+        </div>
+
+        <div class="form-group">
+          <div class="toggle-wrap">
+            <input type="checkbox" class="toggle" id="ed-anon" />
+            <label class="toggle-label" for="ed-anon">Post as Anonymous</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tags</label>
+          <input class="form-input" id="ed-tags" placeholder="college, fitness, grind (comma-separated)" />
+          <p class="form-hint">Readers can filter by these tags</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main: chapters -->
+    <main class="editor-main">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 style="font-size:1.1rem;font-weight:700">Chapters</h2>
+        <button class="btn btn--primary btn--sm" onclick="addChapter()">＋ Add Chapter</button>
+      </div>
+
+      <div id="chapters-container">
+        <!-- Populated by editor.js -->
+      </div>
+
+      <div style="text-align:center;padding:20px 0;border-top:1px solid var(--border);margin-top:12px">
+        <button class="btn btn--secondary" onclick="addChapter()">＋ Add Chapter</button>
+      </div>
+
+      <!-- Publish panel -->
+      <div class="publish-panel hidden" id="publish-panel">
+        <h2>🚀 How to Publish</h2>
+        <p class="text-muted" style="font-size:0.875rem;margin-bottom:20px">
+          StoryQuest uses GitHub Issues as its database. Follow these steps to make your story public:
+        </p>
+
+        <ol class="publish-steps">
+          <li>
+            Open the StoryQuest GitHub repository:
+            <a href="https://github.com/TheshanBMR/StoryQuest/issues/new" target="_blank" rel="noopener">
+              github.com/TheshanBMR/StoryQuest → Issues → New Issue
+            </a>
+          </li>
+          <li>
+            Set the issue <strong>Title</strong> to:
+            <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:0.85rem" id="issue-title-sug"></code>
+          </li>
+          <li>
+            Copy the template below and paste it as the issue <strong>body</strong>:
+          </li>
+          <li>
+            Add these <strong>Labels</strong>: <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:0.85rem">published</code>, your theme label, and any tag labels.
+          </li>
+          <li>
+            Click <strong>Submit new issue</strong>. Note the issue number (e.g., #42).
+          </li>
+          <li>
+            Your story will be live at:
+            <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:0.85rem">
+              https://theshanbmr.github.io/StoryQuest/s.html?id=ISSUE_NUMBER
+            </code>
+          </li>
+        </ol>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
+          <strong style="font-size:0.9rem">Issue Template</strong>
+          <button class="btn btn--secondary btn--sm" onclick="copyIssueTemplate()">📋 Copy Template</button>
+        </div>
+        <div class="code-block" id="issue-template-code"></div>
+
+        <hr class="divider" />
+
+        <!-- OAuth Placeholder -->
+        <div class="oauth-placeholder">
+          <strong>🔮 Coming Soon: One-Click Publish</strong>
+          This module will support GitHub OAuth / Device Flow to post the issue automatically.
+          When implemented, replace this block with the OAuth init code and remove the manual steps above.
+          <!-- OAUTH_PLACEHOLDER_MODULE_START -->
+          <!-- Steps: 1) Redirect to GitHub OAuth  2) Exchange code for token  3) POST /repos/:owner/:repo/issues -->
+          <!-- Do NOT store secrets here. Use GitHub Actions or a proxy if token exchange is needed. -->
+          <!-- OAUTH_PLACEHOLDER_MODULE_END -->
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /editor-layout -->
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/storage.js"></script>
+<script src="assets/github.js"></script>
+<script src="assets/editor.js"></script>
+<script>
+(function () {
+  setActiveNav();
+
+  // Populate theme select
+  const themeSelect = document.getElementById("ed-theme");
+  THEMES.forEach(t => {
+    const opt  = document.createElement("option");
+    opt.value  = t.id;
+    opt.textContent = `${t.emoji} ${t.label}`;
+    themeSelect.appendChild(opt);
+  });
+
+  editorInit();
+})();
+</script>
+</body>
+</html>

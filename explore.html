@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Explore Stories — StoryQuest</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a class="nav__logo" href="index.html">Story<span>Quest</span></a>
+    <div class="nav__links">
+      <a class="nav__link" href="index.html">Home</a>
+      <a class="nav__link" href="explore.html">Explore</a>
+      <a class="nav__link" href="me.html">My Drafts</a>
+    </div>
+    <a class="nav__cta" href="editor.html">+ Write Story</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <h1>Explore Stories</h1>
+    <p>Discover real journeys from the community</p>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+      <label>Theme</label>
+      <select class="form-select" id="filter-theme" style="width:auto">
+        <option value="">All Themes</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:180px">
+      <label>Tag</label>
+      <input class="form-input" id="filter-tag" placeholder="e.g. college, fitness…" />
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+      <label>Sort</label>
+      <select class="form-select" id="filter-sort" style="width:auto">
+        <option value="trending">🔥 Trending</option>
+        <option value="new">🆕 New</option>
+      </select>
+    </div>
+    <button class="btn btn--primary btn--sm" id="apply-filters-btn">Apply</button>
+  </div>
+
+  <div class="error-banner hidden" id="explore-error"></div>
+
+  <div class="stories-grid" id="explore-grid"></div>
+
+  <div class="load-more-wrap">
+    <button class="btn btn--secondary hidden" id="load-more-btn">Load More Stories</button>
+  </div>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/storage.js"></script>
+<script src="assets/github.js"></script>
+<script src="assets/feed.js"></script>
+<script>
+(function () {
+  setActiveNav();
+
+  const themeSelect = document.getElementById("filter-theme");
+  const tagInput    = document.getElementById("filter-tag");
+  const sortSelect  = document.getElementById("filter-sort");
+  const applyBtn    = document.getElementById("apply-filters-btn");
+  const grid        = document.getElementById("explore-grid");
+  const loadMoreBtn = document.getElementById("load-more-btn");
+  const errorEl     = document.getElementById("explore-error");
+
+  // Populate theme dropdown
+  THEMES.forEach(t => {
+    const opt  = document.createElement("option");
+    opt.value  = t.id;
+    opt.textContent = `${t.emoji} ${t.label}`;
+    themeSelect.appendChild(opt);
+  });
+
+  // Pre-fill from URL params
+  const urlTheme = qp("theme") || "";
+  const urlTag   = qp("tag")   || "";
+  const urlSort  = qp("sort")  || "trending";
+  if (urlTheme)  themeSelect.value = urlTheme;
+  if (urlTag)    tagInput.value    = urlTag;
+  if (urlSort)   sortSelect.value  = urlSort;
+
+  FeedModule.init({ gridEl: grid, loadMoreBtn, errorEl });
+
+  function applyFilters() {
+    FeedModule.setFilters({
+      theme: themeSelect.value,
+      tag:   tagInput.value.trim(),
+      sort:  sortSelect.value,
+    });
+    FeedModule.load();
+  }
+
+  applyBtn.addEventListener("click", applyFilters);
+  tagInput.addEventListener("keydown", e => { if (e.key === "Enter") applyFilters(); });
+  loadMoreBtn.addEventListener("click", () => FeedModule.loadMore());
+
+  // Initial load
+  FeedModule.setFilters({ theme: urlTheme, tag: urlTag, sort: urlSort });
+  FeedModule.load();
+})();
+</script>
+</body>
+</html>

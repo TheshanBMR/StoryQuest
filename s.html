@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StoryQuest — Reading…</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a class="nav__logo" href="index.html">Story<span>Quest</span></a>
+    <div class="nav__links">
+      <a class="nav__link" href="index.html">Home</a>
+      <a class="nav__link" href="explore.html">Explore</a>
+      <a class="nav__link" href="me.html">My Drafts</a>
+    </div>
+    <a class="nav__cta" href="editor.html">+ Write Story</a>
+  </div>
+</nav>
+
+<div class="viewer-wrap">
+  <!-- Cover (populated by viewer.js) -->
+  <div class="viewer-cover" id="viewer-cover"></div>
+
+  <!-- XP bar -->
+  <div class="xp-bar" id="xp-bar">
+    <span class="xp-bar__label">XP</span>
+    <span class="xp-bar__val">0</span>
+    <div class="xp-bar__track"><div class="xp-bar__fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Chapter content -->
+  <div id="viewer-content"></div>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/storage.js"></script>
+<script src="assets/github.js"></script>
+<script src="assets/viewer.js"></script>
+<script>
+  setActiveNav();
+  Viewer.init();
+</script>
+</body>
+</html>

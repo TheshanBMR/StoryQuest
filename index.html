@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StoryQuest — Live Your Story</title>
+  <meta name="description" content="Create interactive life stories with chapters and choice moments. Share your journey with the world." />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav class="nav">
+  <div class="nav__inner">
+    <a class="nav__logo" href="index.html">Story<span>Quest</span></a>
+    <div class="nav__links">
+      <a class="nav__link" href="index.html">Home</a>
+      <a class="nav__link" href="explore.html">Explore</a>
+      <a class="nav__link" href="me.html">My Drafts</a>
+    </div>
+    <a class="nav__cta" href="editor.html">+ Write Story</a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="page">
+  <section class="hero">
+    <span class="hero__eyebrow">✨ Interactive Storytelling</span>
+    <h1 class="hero__title">Your life is a<br><em>story worth telling</em></h1>
+    <p class="hero__sub">Create interactive life stories with chapters, choice moments, and branching outcomes. Publish and let readers live your journey.</p>
+    <div class="hero__actions">
+      <a class="btn btn--primary" href="editor.html" style="font-size:1rem;padding:14px 32px">📝 Start Writing</a>
+      <a class="btn btn--secondary" href="explore.html" style="font-size:1rem;padding:14px 32px">🔍 Explore Stories</a>
+    </div>
+  </section>
+
+  <!-- Theme pill filters -->
+  <div class="filter-pill-row" id="theme-pills">
+    <button class="filter-pill filter-pill--active" data-theme="">All Themes</button>
+  </div>
+
+  <!-- Error banner -->
+  <div class="error-banner hidden" id="feed-error"></div>
+
+  <!-- Trending -->
+  <section class="section" id="section-trending">
+    <div class="section__header">
+      <h2 class="section__title">🔥 Trending</h2>
+      <span class="section__sub">Most popular right now</span>
+    </div>
+    <div class="stories-grid" id="grid-trending"></div>
+  </section>
+
+  <!-- New -->
+  <section class="section" id="section-new">
+    <div class="section__header">
+      <h2 class="section__title">🆕 New Stories</h2>
+      <span class="section__sub">Fresh out</span>
+    </div>
+    <div class="stories-grid" id="grid-new"></div>
+    <div class="load-more-wrap">
+      <button class="btn btn--secondary hidden" id="load-more-btn">Load More</button>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section">
+    <div class="section__header">
+      <h2 class="section__title">How It Works</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px">
+      <div class="card">
+        <div style="font-size:2rem;margin-bottom:12px">✍️</div>
+        <h3 style="margin-bottom:8px;font-size:1rem">Write Your Story</h3>
+        <p class="text-muted" style="font-size:0.85rem">Build chapters, add choice moments, and craft branching outcomes that make readers feel the journey.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:2rem;margin-bottom:12px">🎮</div>
+        <h3 style="margin-bottom:8px;font-size:1rem">Make It Interactive</h3>
+        <p class="text-muted" style="font-size:0.85rem">Add A/B/C choices with XP rewards. Readers make decisions and see what happens in your real-life arc.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:2rem;margin-bottom:12px">🌍</div>
+        <h3 style="margin-bottom:8px;font-size:1rem">Publish &amp; Share</h3>
+        <p class="text-muted" style="font-size:0.85rem">Export your story JSON and publish to GitHub Issues. Copy the link and share with your audience.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:2rem;margin-bottom:12px">⭐</div>
+        <h3 style="margin-bottom:8px;font-size:1rem">Earn Recognition</h3>
+        <p class="text-muted" style="font-size:0.85rem">Reactions and comments from readers push your story to the trending feed.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/storage.js"></script>
+<script src="assets/github.js"></script>
+<script src="assets/feed.js"></script>
+<script>
+(function () {
+  setActiveNav();
+
+  // Build theme pills
+  const pillRow = document.getElementById("theme-pills");
+  THEMES.forEach(t => {
+    const btn = document.createElement("button");
+    btn.className   = "filter-pill";
+    btn.dataset.theme = t.id;
+    btn.textContent = `${t.emoji} ${t.label}`;
+    pillRow.appendChild(btn);
+  });
+
+  let activeTheme = "";
+
+  pillRow.querySelectorAll(".filter-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      pillRow.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("filter-pill--active"));
+      pill.classList.add("filter-pill--active");
+      activeTheme = pill.dataset.theme || "";
+      loadAll();
+    });
+  });
+
+  // Trending grid
+  const gridTrending = document.getElementById("grid-trending");
+  const gridNew      = document.getElementById("grid-new");
+  const loadMoreBtn  = document.getElementById("load-more-btn");
+  const errorBanner  = document.getElementById("feed-error");
+
+  let trendingStories = [];
+  let newPage         = 1;
+  let newHasMore      = false;
+  let newLoading      = false;
+
+  async function loadAll() {
+    newPage = 1;
+    gridTrending.innerHTML = spinnerHtml();
+    gridNew.innerHTML      = spinnerHtml();
+    loadMoreBtn.classList.add("hidden");
+    errorBanner.classList.add("hidden");
+
+    try {
+      const { stories } = await fetchPublishedStories({ page: 1, perPage: 20, themeFilter: activeTheme });
+
+      // Trending: top 4 by score
+      trendingStories = [...stories].sort((a, b) => trendingScore(b) - trendingScore(a)).slice(0, 4);
+      renderGrid(gridTrending, trendingStories);
+
+      // New: sorted by date
+      const newStories = [...stories].sort((a, b) =>
+        new Date(b._updatedAt || b.updatedAt) - new Date(a._updatedAt || a.updatedAt)
+      );
+      renderGrid(gridNew, newStories);
+
+      newHasMore = stories.length >= 20;
+      loadMoreBtn.classList.toggle("hidden", !newHasMore);
+    } catch (err) {
+      errorBanner.textContent = err.message;
+      errorBanner.classList.remove("hidden");
+      gridTrending.innerHTML = "";
+      gridNew.innerHTML      = "";
+    }
+  }
+
+  function renderGrid(el, list) {
+    if (!list.length) {
+      el.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-state__icon">📖</div>
+        <div class="empty-state__title">No stories yet</div>
+        <p style="font-size:0.85rem">Be the first — <a href="editor.html" class="text-accent">write one!</a></p>
+      </div>`;
+      return;
+    }
+    el.innerHTML = list.map(s => storyCardHtml(s, `s.html?id=${s._issueNumber}`)).join("");
+  }
+
+  loadMoreBtn.addEventListener("click", async () => {
+    if (newLoading || !newHasMore) return;
+    newLoading = true;
+    loadMoreBtn.disabled = true;
+    try {
+      newPage++;
+      const { stories, hasMore } = await fetchPublishedStories({
+        page: newPage, perPage: 12, themeFilter: activeTheme
+      });
+      newHasMore = hasMore;
+      const newItems = [...stories].sort((a, b) =>
+        new Date(b._updatedAt || b.updatedAt) - new Date(a._updatedAt || a.updatedAt)
+      );
+      newItems.forEach(s => {
+        gridNew.insertAdjacentHTML("beforeend", storyCardHtml(s, `s.html?id=${s._issueNumber}`));
+      });
+      loadMoreBtn.classList.toggle("hidden", !newHasMore);
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      newLoading = false;
+      loadMoreBtn.disabled = false;
+    }
+  });
+
+  loadAll();
+})();
+</script>
+</body>
+</html>
