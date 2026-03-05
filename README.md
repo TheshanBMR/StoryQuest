@@ -2,7 +2,7 @@
 
 > Interactive life stories with chapters and choice moments — powered by GitHub Issues.
 
-**Live Site:** https://theshanbmr.github.io/StoryQuest/
+**Live Site:** [https://theshanbmr.github.io/StoryQuest/](https://theshanbmr.github.io/StoryQuest/)
 
 ## What is this?
 
