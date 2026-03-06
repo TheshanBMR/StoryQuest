@@ -237,6 +237,11 @@ async function _fetchAllPublished() {
     + "/issues?labels=" + encodeURIComponent(PUBLISHED_LABEL)
     + "&state=open&per_page=100&page=1";
   var issues = await ghFetch(url);
+  if (!Array.isArray(issues)) {
+    // GitHub returned an error object (rate limit, auth, etc) — don't cache it
+    var msg = (issues && issues.message) ? issues.message : JSON.stringify(issues).slice(0, 120);
+    throw new Error("GitHub API error: " + msg);
+  }
   _allStoriesCache     = issues.map(parseStoryFromIssue).filter(Boolean);
   _allStoriesCacheTime = Date.now();
   return _allStoriesCache;
@@ -273,12 +278,17 @@ async function fetchPublishedStories(opts) {
 
 // ── Public: single story by issue number ─────────────────────
 async function fetchStoryByIssue(issueNumber) {
-  // Always bypass cache for single-issue fetches to avoid stale body=undefined
-  var url   = GITHUB_API_BASE + "/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO + "/issues/" + issueNumber;
-  // Remove any cached version first so we always get fresh body
-  try { sessionStorage.removeItem(_cacheKey(url)); } catch (e) {}
-
-  var issue = await ghFetch(url);
+  var url = GITHUB_API_BASE + "/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO + "/issues/" + issueNumber;
+  // Always fetch fresh — never use cached version (avoids stale body=undefined bug)
+  var res = await fetch(url, { headers: { Accept: "application/vnd.github+json" } });
+  if (res.status === 403 || res.status === 429) {
+    var reset = res.headers.get("X-RateLimit-Reset");
+    throw new Error(reset
+      ? "GitHub rate limit exceeded. Resets at " + new Date(reset * 1000).toLocaleTimeString() + "."
+      : "GitHub rate limit exceeded. Please try again later.");
+  }
+  if (!res.ok) throw new Error("GitHub API error: " + res.status + " " + res.statusText);
+  var issue = await res.json();
 
   if (!issue || issue.body === undefined || issue.body === null) {
     throw new Error("Issue #" + issueNumber + " has no body. It may be empty or private.");
