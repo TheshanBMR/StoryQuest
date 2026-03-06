@@ -43,7 +43,13 @@ const COVER_STYLES = [
   { id: "purple",       label: "Purple",       css: "linear-gradient(135deg,#a18cd1,#fbc2eb)" },
   { id: "dark",         label: "Dark",         css: "linear-gradient(135deg,#0f0c29,#302b63)" },
   { id: "paper_neon",   label: "Paper Neon",   css: "linear-gradient(135deg,#f8ffae,#43c6ac)" },
+  { id: "arcade_glow",  label: "Arcade Glow",  css: "linear-gradient(135deg,#f953c6,#b91d73,#7c3aed)" },
   { id: "paper",        label: "Paper",        css: "linear-gradient(135deg,#f5f7fa,#c3cfe2)" },
+  { id: "paper",        label: "Paper",        css: "linear-gradient(135deg,#f5f7fa,#c3cfe2)" },
+  { id: "arcade",       label: "Arcade",       css: "linear-gradient(135deg,#f953c6,#00f2fe)" },
+  { id: "neon_blue",    label: "Neon Blue",    css: "linear-gradient(135deg,#4facfe,#00f2fe)" },
+  { id: "neon_green",   label: "Neon Green",   css: "linear-gradient(135deg,#43e97b,#38f9d7)" },
+  { id: "neon_purple",  label: "Neon Purple",  css: "linear-gradient(135deg,#a18cd1,#f953c6)" },
 ];
 
 const REACTION_MAP = {
