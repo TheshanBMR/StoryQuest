@@ -100,8 +100,8 @@ const Viewer = (() => {
     script.setAttribute("data-repo-id",         "R_kgDORfh-Vw");
     script.setAttribute("data-category",        "Announcements");
     script.setAttribute("data-category-id",     "DIC_kwDORfh-V84C30H0");
-    script.setAttribute("data-mapping",         "specific");
-    script.setAttribute("data-term",            "story-" + issueId);
+    script.setAttribute("data-mapping",         "number");
+    script.setAttribute("data-term",            issueId);
     script.setAttribute("data-strict",          "0");
     script.setAttribute("data-reactions-enabled", "1");
     script.setAttribute("data-emit-metadata",   "0");
