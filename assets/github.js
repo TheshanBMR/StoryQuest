@@ -227,6 +227,53 @@ function parseStoryFromIssue(issue) {
   return _normaliseStory(raw, issue);
 }
 
+// ── Fetch Giscus discussion counts via REST (public, no auth) ──
+// Giscus creates GitHub Discussions titled "story-N".
+// We fetch all discussions and build a lookup map.
+
+var _giscusDiscCache     = null;
+var _giscusDiscCacheTime = 0;
+
+async function _fetchGiscusDiscussions() {
+  if (_giscusDiscCache && (Date.now() - _giscusDiscCacheTime) < CACHE_TTL_MS) {
+    return _giscusDiscCache;
+  }
+
+  // GitHub REST API for Discussions is not available unauthenticated.
+  // Instead we use the search API to find discussions in the repo.
+  // Format: GET /search/issues?q=repo:owner/repo+type:discussion
+  // Note: This searches discussion titles/bodies.
+  var url = "https://api.github.com/search/issues?q=repo:" + GITHUB_OWNER + "/" + GITHUB_REPO
+    + "+type:discussion&per_page=100";
+
+  try {
+    var res  = await fetch(url, { headers: { Accept: "application/vnd.github+json" } });
+    if (!res.ok) { _giscusDiscCache = {}; _giscusDiscCacheTime = Date.now(); return {}; }
+    var data = await res.json();
+    var map  = {};
+    if (data && Array.isArray(data.items)) {
+      data.items.forEach(function(item) {
+        // Giscus titles are like "story-6"
+        if (item.title && item.title.match(/^story-\d+$/)) {
+          map[item.title] = {
+            reactions: item.reactions
+              ? (item.reactions["+1"] || 0) + (item.reactions.heart || 0) +
+                (item.reactions.hooray || 0) + (item.reactions.rocket || 0) +
+                (item.reactions.laugh || 0) + (item.reactions.eyes || 0)
+              : 0,
+            comments: item.comments || 0,
+          };
+        }
+      });
+    }
+    _giscusDiscCache     = map;
+    _giscusDiscCacheTime = Date.now();
+    return map;
+  } catch(e) {
+    return {};
+  }
+}
+
 // ── In-memory published story cache ──────────────────────────
 var _allStoriesCache     = null;
 var _allStoriesCacheTime = 0;
@@ -245,18 +292,18 @@ async function _fetchAllPublished() {
   }
   var parsed = issues.map(parseStoryFromIssue).filter(Boolean);
 
-  // Enrich each story with Giscus discussion counts (best-effort, non-blocking)
-  // GraphQL needs auth so this may return 0s for unauthenticated — that is fine
-  await Promise.all(parsed.map(async function(story) {
-    try {
-      var g = await fetchGiscusReactions(story._issueNumber);
-      story._giscusReactions = g.reactions || 0;
-      story._giscusComments  = g.comments  || 0;
-    } catch (e) {
-      story._giscusReactions = 0;
-      story._giscusComments  = 0;
-    }
-  }));
+  // Enrich each story with Giscus discussion counts via REST search (public, no auth needed)
+  try {
+    var discData = await _fetchGiscusDiscussions();
+    parsed.forEach(function(story) {
+      var term = "story-" + story._issueNumber;
+      var disc = discData[term];
+      story._giscusReactions = disc ? disc.reactions : 0;
+      story._giscusComments  = disc ? disc.comments  : 0;
+    });
+  } catch(e) {
+    parsed.forEach(function(s) { s._giscusReactions = 0; s._giscusComments = 0; });
+  }
 
   _allStoriesCache     = parsed;
   _allStoriesCacheTime = Date.now();
@@ -335,22 +382,6 @@ window.sqDebug = async function (issueNumber) {
 };
 
 
-// ── Fetch Giscus discussion data via GitHub GraphQL ─────────
-// Giscus stores reactions in Discussions, not Issues.
-// We query by the discussion title (e.g. "story-6") to get reaction counts.
-
-var _discussionCache     = {};
-var _discussionCacheTime = {};
-
-async function fetchGiscusReactions(issueNumber) {
-  var term     = "story-" + issueNumber;
-  var cacheKey = "giscus_" + issueNumber;
-  var now      = Date.now();
-
-  if (_discussionCache[cacheKey] && (now - _discussionCacheTime[cacheKey]) < CACHE_TTL_MS) {
-    return _discussionCache[cacheKey];
-  }
-
   // Use GitHub GraphQL to search discussions by title
   var query = `{
     repository(owner: "TheshanBMR", name: "StoryQuest") {
@@ -406,9 +437,8 @@ function trendingScore(story) {
   var r        = story._reactions || {};
   var positive = (r["+1"] || 0) + (r.heart || 0) + (r.hooray || 0) + (r.rocket || 0);
   var comments = story._comments || 0;
-  // Add giscus discussion reactions/comments if available
-  var gReactions = story._giscusReactions || 0;
-  var gComments  = story._giscusComments  || 0;
-  var ms         = Date.now() - new Date(story._updatedAt || story.updatedAt || Date.now()).getTime();
-  return ((positive + gReactions) * 3 + (comments + gComments) * 2) / Math.max(1, ms / 86400000);
+  var gReact   = story._giscusReactions || 0;
+  var gComm    = story._giscusComments  || 0;
+  var ms       = Date.now() - new Date(story._updatedAt || story.updatedAt || Date.now()).getTime();
+  return ((positive + gReact) * 3 + (comments + gComm) * 2) / Math.max(1, ms / 86400000);
 }
