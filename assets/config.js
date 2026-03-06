@@ -42,6 +42,8 @@ const COVER_STYLES = [
   { id: "ice",          label: "Ice",          css: "linear-gradient(135deg,#74ebd5,#acb6e5)" },
   { id: "purple",       label: "Purple",       css: "linear-gradient(135deg,#a18cd1,#fbc2eb)" },
   { id: "dark",         label: "Dark",         css: "linear-gradient(135deg,#0f0c29,#302b63)" },
+  { id: "paper_neon",   label: "Paper Neon",   css: "linear-gradient(135deg,#f8ffae,#43c6ac)" },
+  { id: "paper",        label: "Paper",        css: "linear-gradient(135deg,#f5f7fa,#c3cfe2)" },
 ];
 
 const REACTION_MAP = {
