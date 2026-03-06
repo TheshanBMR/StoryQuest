@@ -818,3 +818,39 @@ h1,h2,h3,h4 { font-family: var(--font-display); line-height: 1.2; }
   60%  { transform: scale(1.2) translateY(-2px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
+
+/* ── Giscus reactions + comments ─────────────────────────── */
+.giscus-wrap {
+  max-width: 680px;
+  margin: 40px auto 0;
+  padding: 0 24px 60px;
+}
+.giscus-wrap__header {
+  text-align: center;
+  padding: 32px 0 24px;
+  border-top: 1px solid var(--border);
+}
+.giscus-wrap__icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 8px;
+}
+.giscus-wrap__title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.giscus-wrap__sub {
+  font-size: 0.85rem;
+  color: var(--text3);
+}
+.giscus-container {
+  margin-top: 8px;
+}
+/* Force giscus iframe to match dark theme */
+.giscus, .giscus-frame {
+  width: 100%;
+  min-height: 200px;
+  border: none;
+  border-radius: var(--radius);
+}
