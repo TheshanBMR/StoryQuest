@@ -140,7 +140,7 @@ const Viewer = (() => {
                       onclick="Viewer._pickOption('${escHtml(choice.id)}','${escHtml(opt.id)}')">
                 <span class="choice-opt-letter">${escHtml(opt.id.toUpperCase())}</span>
                 <span class="choice-opt-text">${escHtml(opt.text || "Option " + opt.id.toUpperCase())}</span>
-                <span class="choice-opt-xp">${isMade ? "+" + opt.xp + " XP" : opt.xp + " XP"}</span>
+                ${isMade ? `<span class="choice-opt-xp choice-opt-xp--reveal">+${opt.xp} XP ✨</span>` : ""}
               </button>
               ${isMade && opt.outcome ? `<div class="outcome-text">💬 ${escHtml(opt.outcome)}</div>` : ""}
             `;
@@ -213,7 +213,7 @@ const Viewer = (() => {
     const xp    = _progress.xp || 0;
     const issueId = qp("id");
     const shareUrl = issueId
-      ? `${location.origin}${location.pathname}s.html?id=${issueId}`
+      ? `${location.origin}/StoryQuest/s.html?id=${issueId}`
       : "";
 
     wrap.innerHTML = `
