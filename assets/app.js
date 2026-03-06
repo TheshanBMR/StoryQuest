@@ -67,9 +67,12 @@ function storyCardHtml(story, linkHref) {
     ? "Anonymous"
     : (story.author?.displayName || story.author?.handle || "Unknown");
   const updated = story._updatedAt || story.updatedAt;
-  const reactions = story._reactions || {};
-  const positives = (reactions["+1"] || 0) + (reactions.heart || 0) + (reactions.rocket || 0) + (reactions.hooray || 0);
-  const chapters  = (story.chapters || []).length;
+  const reactions  = story._reactions || {};
+  const positives  = (reactions["+1"] || 0) + (reactions.heart || 0) + (reactions.rocket || 0) + (reactions.hooray || 0);
+  const chapters   = (story.chapters || []).length;
+  // Combine issue reactions + giscus reactions for display
+  const totalReact = positives + (story._giscusReactions || 0);
+  const totalComm  = (story._comments || 0) + (story._giscusComments || 0);
 
   return `
 <a class="story-card" href="${escHtml(linkHref)}" style="text-decoration:none">
@@ -85,8 +88,8 @@ function storyCardHtml(story, linkHref) {
     </div>
     <div class="story-card__stats">
       <span>📖 ${chapters} ch</span>
-      ${story._comments ? `<span>💬 ${story._comments}</span>` : ""}
-      ${positives       ? `<span>❤️ ${positives}</span>`      : ""}
+      ${totalComm  ? `<span>💬 ${totalComm}</span>`  : ""}
+      ${totalReact ? `<span>❤️ ${totalReact}</span>` : ""}
     </div>
   </div>
 </a>`;

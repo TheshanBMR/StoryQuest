@@ -210,12 +210,14 @@ function _normaliseStory(raw, issue) {
     createdAt:    raw.createdAt   || issue.created_at,
     updatedAt:    raw.updatedAt   || issue.updated_at,
     chapters:     chapters,
-    _issueNumber: issue.number,
-    _issueUrl:    issue.html_url,
-    _reactions:   issue.reactions || {},
-    _comments:    issue.comments  || 0,
-    _updatedAt:   issue.updated_at,
-    _labels:      labels,
+    _issueNumber:      issue.number,
+    _issueUrl:         issue.html_url,
+    _reactions:        issue.reactions || {},
+    _comments:         issue.comments  || 0,
+    _updatedAt:        issue.updated_at,
+    _labels:           labels,
+    _giscusReactions:  0,
+    _giscusComments:   0,
   };
 }
 
@@ -238,11 +240,25 @@ async function _fetchAllPublished() {
     + "&state=open&per_page=100&page=1";
   var issues = await ghFetch(url);
   if (!Array.isArray(issues)) {
-    // GitHub returned an error object (rate limit, auth, etc) — don't cache it
     var msg = (issues && issues.message) ? issues.message : JSON.stringify(issues).slice(0, 120);
     throw new Error("GitHub API error: " + msg);
   }
-  _allStoriesCache     = issues.map(parseStoryFromIssue).filter(Boolean);
+  var parsed = issues.map(parseStoryFromIssue).filter(Boolean);
+
+  // Enrich each story with Giscus discussion counts (best-effort, non-blocking)
+  // GraphQL needs auth so this may return 0s for unauthenticated — that is fine
+  await Promise.all(parsed.map(async function(story) {
+    try {
+      var g = await fetchGiscusReactions(story._issueNumber);
+      story._giscusReactions = g.reactions || 0;
+      story._giscusComments  = g.comments  || 0;
+    } catch (e) {
+      story._giscusReactions = 0;
+      story._giscusComments  = 0;
+    }
+  }));
+
+  _allStoriesCache     = parsed;
   _allStoriesCacheTime = Date.now();
   return _allStoriesCache;
 }
@@ -318,11 +334,81 @@ window.sqDebug = async function (issueNumber) {
   return raw;
 };
 
+
+// ── Fetch Giscus discussion data via GitHub GraphQL ─────────
+// Giscus stores reactions in Discussions, not Issues.
+// We query by the discussion title (e.g. "story-6") to get reaction counts.
+
+var _discussionCache     = {};
+var _discussionCacheTime = {};
+
+async function fetchGiscusReactions(issueNumber) {
+  var term     = "story-" + issueNumber;
+  var cacheKey = "giscus_" + issueNumber;
+  var now      = Date.now();
+
+  if (_discussionCache[cacheKey] && (now - _discussionCacheTime[cacheKey]) < CACHE_TTL_MS) {
+    return _discussionCache[cacheKey];
+  }
+
+  // Use GitHub GraphQL to search discussions by title
+  var query = `{
+    repository(owner: "TheshanBMR", name: "StoryQuest") {
+      discussions(first: 5, orderBy: {field: CREATED_AT, direction: DESC}) {
+        nodes {
+          title
+          comments { totalCount }
+          reactions { totalCount }
+          reactionGroups {
+            content
+            reactors { totalCount }
+          }
+        }
+      }
+    }
+  }`;
+
+  try {
+    var res = await fetch("https://api.github.com/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({ query: query })
+    });
+
+    // GraphQL requires auth — unauthenticated requests fail
+    // So we fall back to zero gracefully
+    if (!res.ok) return { reactions: 0, comments: 0 };
+
+    var data = await res.json();
+    var nodes = (data.data && data.data.repository && data.data.repository.discussions.nodes) || [];
+    var disc  = nodes.find(function(n) { return n.title === term; });
+
+    if (!disc) return { reactions: 0, comments: 0 };
+
+    var reactions = disc.reactionGroups
+      ? disc.reactionGroups.reduce(function(sum, g) { return sum + (g.reactors ? g.reactors.totalCount : 0); }, 0)
+      : (disc.reactions ? disc.reactions.totalCount : 0);
+
+    var result = { reactions: reactions, comments: disc.comments ? disc.comments.totalCount : 0 };
+    _discussionCache[cacheKey]     = result;
+    _discussionCacheTime[cacheKey] = now;
+    return result;
+  } catch (e) {
+    return { reactions: 0, comments: 0 };
+  }
+}
+
 // ── Trending score ────────────────────────────────────────────
 function trendingScore(story) {
   var r        = story._reactions || {};
   var positive = (r["+1"] || 0) + (r.heart || 0) + (r.hooray || 0) + (r.rocket || 0);
   var comments = story._comments || 0;
-  var ms       = Date.now() - new Date(story._updatedAt || story.updatedAt || Date.now()).getTime();
-  return (positive * 3 + comments * 2) / Math.max(1, ms / 86400000);
+  // Add giscus discussion reactions/comments if available
+  var gReactions = story._giscusReactions || 0;
+  var gComments  = story._giscusComments  || 0;
+  var ms         = Date.now() - new Date(story._updatedAt || story.updatedAt || Date.now()).getTime();
+  return ((positive + gReactions) * 3 + (comments + gComments) * 2) / Math.max(1, ms / 86400000);
 }
