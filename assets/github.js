@@ -381,57 +381,6 @@ window.sqDebug = async function (issueNumber) {
   return raw;
 };
 
-
-  // Use GitHub GraphQL to search discussions by title
-  var query = `{
-    repository(owner: "TheshanBMR", name: "StoryQuest") {
-      discussions(first: 5, orderBy: {field: CREATED_AT, direction: DESC}) {
-        nodes {
-          title
-          comments { totalCount }
-          reactions { totalCount }
-          reactionGroups {
-            content
-            reactors { totalCount }
-          }
-        }
-      }
-    }
-  }`;
-
-  try {
-    var res = await fetch("https://api.github.com/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({ query: query })
-    });
-
-    // GraphQL requires auth — unauthenticated requests fail
-    // So we fall back to zero gracefully
-    if (!res.ok) return { reactions: 0, comments: 0 };
-
-    var data = await res.json();
-    var nodes = (data.data && data.data.repository && data.data.repository.discussions.nodes) || [];
-    var disc  = nodes.find(function(n) { return n.title === term; });
-
-    if (!disc) return { reactions: 0, comments: 0 };
-
-    var reactions = disc.reactionGroups
-      ? disc.reactionGroups.reduce(function(sum, g) { return sum + (g.reactors ? g.reactors.totalCount : 0); }, 0)
-      : (disc.reactions ? disc.reactions.totalCount : 0);
-
-    var result = { reactions: reactions, comments: disc.comments ? disc.comments.totalCount : 0 };
-    _discussionCache[cacheKey]     = result;
-    _discussionCacheTime[cacheKey] = now;
-    return result;
-  } catch (e) {
-    return { reactions: 0, comments: 0 };
-  }
-}
-
 // ── Trending score ────────────────────────────────────────────
 function trendingScore(story) {
   var r        = story._reactions || {};
