@@ -2,39 +2,45 @@
 //  StoryQuest — Feed logic (home + explore)
 // ============================================================
 
-const FeedModule = (() => {
-  let _stories        = [];
-  let _page           = 1;
-  let _hasMore        = false;
-  let _loading        = false;
-  let _themeFilter    = "";
-  let _tagFilter      = "";
-  let _sort           = "trending";
-  let _targetGrid     = null;
-  let _loadMoreBtn    = null;
-  let _errorBanner    = null;
+var FeedModule = (function () {
+  var _page        = 1;
+  var _hasMore     = false;
+  var _loading     = false;
+  var _themeFilter = "";
+  var _tagFilter   = "";
+  var _sort        = "trending";
+  var _targetGrid  = null;
+  var _loadMoreBtn = null;
+  var _errorBanner = null;
 
-  function init({ gridEl, loadMoreBtn, errorEl }) {
-    _targetGrid  = gridEl;
-    _loadMoreBtn = loadMoreBtn;
-    _errorBanner = errorEl;
+  function init(opts) {
+    _targetGrid  = opts.gridEl;
+    _loadMoreBtn = opts.loadMoreBtn;
+    _errorBanner = opts.errorEl;
   }
 
-  function setFilters({ theme = "", tag = "", sort = "trending" }) {
-    _themeFilter = theme;
-    _tagFilter   = tag;
-    _sort        = sort;
+  function setFilters(opts) {
+    opts         = opts || {};
+    _themeFilter = opts.theme || "";
+    _tagFilter   = opts.tag   || "";
+    _sort        = opts.sort  || "trending";
     _page        = 1;
-    _stories     = [];
+    // Reset in-memory story cache so filtering always starts fresh
+    if (typeof _allStoriesCache !== "undefined") {
+      _allStoriesCache     = null;
+      _allStoriesCacheTime = 0;
+    }
   }
 
-  function _sortStories(list) {
+  function _sortList(list) {
     if (_sort === "new") {
-      return [...list].sort((a, b) =>
-        new Date(b._updatedAt || b.updatedAt) - new Date(a._updatedAt || a.updatedAt)
-      );
+      return list.slice().sort(function(a, b) {
+        return new Date(b._updatedAt || b.updatedAt) - new Date(a._updatedAt || a.updatedAt);
+      });
     }
-    return [...list].sort((a, b) => trendingScore(b) - trendingScore(a));
+    return list.slice().sort(function(a, b) {
+      return trendingScore(b) - trendingScore(a);
+    });
   }
 
   async function load() {
@@ -44,19 +50,18 @@ const FeedModule = (() => {
     if (_page === 1 && _targetGrid) _targetGrid.innerHTML = spinnerHtml();
 
     try {
-      const { stories, hasMore } = await fetchPublishedStories({
+      var result = await fetchPublishedStories({
         page:        _page,
         perPage:     12,
         themeFilter: _themeFilter,
         tagFilter:   _tagFilter,
       });
 
-      _hasMore = hasMore;
-      _stories = _page === 1 ? stories : [..._stories, ...stories];
+      _hasMore = result.hasMore;
+      var sorted = _sortList(result.stories);
+      _renderStories(sorted, _page > 1);
 
-      const sorted = _sortStories(_stories);
-      renderStories(sorted);
-      if (_page === 1 && _errorBanner) _errorBanner.classList.add("hidden");
+      if (_errorBanner) _errorBanner.classList.add("hidden");
 
     } catch (err) {
       if (_errorBanner) {
@@ -78,21 +83,26 @@ const FeedModule = (() => {
     await load();
   }
 
-  function renderStories(list) {
+  function _renderStories(list, append) {
     if (!_targetGrid) return;
-    if (!list.length) {
-      _targetGrid.innerHTML = `
-        <div class="empty-state" style="grid-column:1/-1">
-          <div class="empty-state__icon">📖</div>
-          <div class="empty-state__title">No stories found</div>
-          <p>Be the first to publish one!</p>
-        </div>`;
+    if (!list.length && !append) {
+      _targetGrid.innerHTML =
+        '<div class="empty-state" style="grid-column:1/-1">' +
+        '<div class="empty-state__icon">📖</div>' +
+        '<div class="empty-state__title">No stories found</div>' +
+        '<p>Try a different filter, or <a href="editor.html" style="color:var(--accent)">write one!</a></p>' +
+        '</div>';
       return;
     }
-    _targetGrid.innerHTML = list.map(s =>
-      storyCardHtml(s, `s.html?id=${s._issueNumber}`)
-    ).join("");
+    var html = list.map(function(s) {
+      return storyCardHtml(s, "s.html?id=" + s._issueNumber);
+    }).join("");
+    if (append) {
+      _targetGrid.insertAdjacentHTML("beforeend", html);
+    } else {
+      _targetGrid.innerHTML = html;
+    }
   }
 
-  return { init, setFilters, load, loadMore };
+  return { init: init, setFilters: setFilters, load: load, loadMore: loadMore };
 })();
